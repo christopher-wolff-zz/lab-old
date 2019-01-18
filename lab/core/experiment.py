@@ -39,13 +39,14 @@ class Experiment(object):
         self._evaluation_steps = evaluation_steps
         self._max_steps_per_episode = max_steps_per_episode
 
+        self._statistics = []
+
     def run(self):
         """Run a full experiment, spread over multiple iterations."""
         logger.info('Beginning training...')
         for iteration in range(self._num_iterations):
             statistics = self._run_one_iteration(iteration)
-            print(statistics)
-            print('---')
+            self._statistics.append(statistics)
 
     def _run_one_iteration(self, iteration):
         """Runs one iteration of agent/environment interaction.
