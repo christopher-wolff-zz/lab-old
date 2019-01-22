@@ -1,6 +1,6 @@
 import numpy as np
 
-from lab.core.agent import Agent
+from lab import Agent
 
 
 class RandomAgent(Agent):

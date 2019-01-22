@@ -1,8 +1,7 @@
 import gym
 
-from lab.agents.q_learning_agent import QLearningAgent
-from lab.core import Environment
-from lab.core import Experiment
+from lab.agents import QLearningAgent
+from lab import Environment, Experiment
 
 
 if __name__ == '__main__':

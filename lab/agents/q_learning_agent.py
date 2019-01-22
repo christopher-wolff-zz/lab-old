@@ -1,6 +1,6 @@
 import numpy as np
 
-from lab.core import Agent
+from lab import Agent
 
 
 class QLearningAgent(Agent):

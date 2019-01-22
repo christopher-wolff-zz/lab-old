@@ -1,1 +1,1 @@
-name = 'lab'
+from .core import Agent, Experiment, Environment

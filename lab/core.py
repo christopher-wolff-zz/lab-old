@@ -4,34 +4,41 @@ import logging
 import sys
 import time
 
+import numpy as np
+
 from lab.common import iteration_statistics
 
 
+# Logger setup
 logger = logging.getLogger('experiment')
 logger.setLevel(logging.DEBUG)
 
+# Type aliases
+Action = int
+Observation = np.ndarray
 
-class Agent(object):
+
+class Agent:
     """An abstract base class for agents."""
 
     def __init__(self):
-        self._seed = None
+        self._seed: int
 
     @property
-    def seed(self, seed):
+    def seed(self, seed: int) -> int:
         return self._seed
 
-    def begin_episode(self, observation):
+    def begin_episode(self, observation: Observation) -> Action:
         raise NotImplementedError('Must be implemented by subclass')
 
-    def step(self, reward, observation):
+    def step(self, reward: float, observation: Observation) -> Action:
         raise NotImplementedError('Must be implemented by subclass')
 
-    def end_episode(self, reward):
+    def end_episode(self, reward: float) -> None:
         raise NotImplementedError('Must be implemented by subclass')
 
 
-class Environment(object):
+class Environment:
     """An abstract base class for environments."""
 
     def __init__(self):
@@ -41,14 +48,14 @@ class Environment(object):
     def seed(self):
         return self._seed
 
-    def step(self):
+    def step(self, action):
         raise NotImplementedError('Must be implemented by subclass')
 
     def reset(self):
         raise NotImplementedError('Must be implemented by subclass')
 
 
-class Experiment(object):
+class Experiment:
     """An object that handles running experiments.
 
     An experiment controls interactions between an agent and an environment and
