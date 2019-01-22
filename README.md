@@ -1,2 +1,2 @@
 # Reinforcement Learning Lab
-A toolkit for testing reinforcement learning algorithms.
+A minimalist toolkit for prototyping reinforcement learning algorithms.
