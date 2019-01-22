@@ -1,4 +1,4 @@
-"""Module defining classes and helper methods for running experiments."""
+"""Core classes needed for experimentation."""
 
 import logging
 import sys
@@ -11,6 +11,43 @@ logger = logging.getLogger('experiment')
 logger.setLevel(logging.DEBUG)
 
 
+class Agent(object):
+    """An abstract base class for agents."""
+
+    def __init__(self):
+        self._seed = None
+
+    @property
+    def seed(self, seed):
+        return self._seed
+
+    def begin_episode(self, observation):
+        raise NotImplementedError('Must be implemented by subclass')
+
+    def step(self, reward, observation):
+        raise NotImplementedError('Must be implemented by subclass')
+
+    def end_episode(self, reward):
+        raise NotImplementedError('Must be implemented by subclass')
+
+
+class Environment(object):
+    """An abstract base class for environments."""
+
+    def __init__(self):
+        self._seed = None
+
+    @property
+    def seed(self):
+        return self._seed
+
+    def step(self):
+        raise NotImplementedError('Must be implemented by subclass')
+
+    def reset(self):
+        raise NotImplementedError('Must be implemented by subclass')
+
+
 class Experiment(object):
     """An object that handles running experiments.
 
@@ -20,7 +57,7 @@ class Experiment(object):
 
     def __init__(self, agent, environment, num_iterations, training_steps,
                  evaluation_steps, max_steps_per_episode):
-        """Initialize the Experiment object.
+        """Initialize an Experiment object.
 
         Args:
             environment: The environment to test the agent in.
