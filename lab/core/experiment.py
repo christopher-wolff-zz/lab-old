@@ -1,58 +1,15 @@
-"""Core classes needed for experimentation."""
-
 import logging
 import sys
 import time
 
-import numpy as np
-
 from lab.common import iteration_statistics
+from lab.core.agent import Agent
+from lab.core.environment import Environment
 
 
 # Logger setup
-logger = logging.getLogger('experiment')
-logger.setLevel(logging.DEBUG)
-
-# Type aliases
-Action = int
-Observation = np.ndarray
-
-
-class Agent:
-    """An abstract base class for agents."""
-
-    def __init__(self):
-        self._seed: int
-
-    @property
-    def seed(self, seed: int) -> int:
-        return self._seed
-
-    def begin_episode(self, observation: Observation) -> Action:
-        raise NotImplementedError('Must be implemented by subclass')
-
-    def step(self, reward: float, observation: Observation) -> Action:
-        raise NotImplementedError('Must be implemented by subclass')
-
-    def end_episode(self, reward: float) -> None:
-        raise NotImplementedError('Must be implemented by subclass')
-
-
-class Environment:
-    """An abstract base class for environments."""
-
-    def __init__(self):
-        self._seed = None
-
-    @property
-    def seed(self):
-        return self._seed
-
-    def step(self, action):
-        raise NotImplementedError('Must be implemented by subclass')
-
-    def reset(self):
-        raise NotImplementedError('Must be implemented by subclass')
+LOGGER = logging.getLogger('experiment')
+LOGGER.setLevel(logging.DEBUG)
 
 
 class Experiment:
@@ -60,20 +17,27 @@ class Experiment:
 
     An experiment controls interactions between an agent and an environment and
     keeps relevant statistics and logs.
+
     """
 
-    def __init__(self, agent, environment, num_iterations, training_steps,
-                 evaluation_steps, max_steps_per_episode):
+    def __init__(self,
+                 agent: Agent,
+                 environment: Environment,
+                 num_iterations: int,
+                 training_steps: int,
+                 evaluation_steps: int,
+                 max_steps_per_episode: int) -> None:
         """Initialize an Experiment object.
 
         Args:
             environment: The environment to test the agent in.
             agent: The agent to act in the experiment.
-            num_iterations: int, the number of iterations to run.
-            training_steps: int, the number of training steps to perform.
-            evaluation_steps: int, the number of evaluation steps to perform.
-            max_steps_per_episode: int, the maximum number of steps after which
+            num_iterations: The number of iterations to run.
+            training_steps: The number of training steps to perform.
+            evaluation_steps: The number of evaluation steps to perform.
+            max_steps_per_episode: The maximum number of steps after which
                 an episode terminates.
+
         """
         self._environment = environment
         self._agent = agent
@@ -87,7 +51,7 @@ class Experiment:
 
     def run(self):
         """Run a full experiment, spread over multiple iterations."""
-        logger.info('Beginning training...')
+        LOGGER.info('Beginning training...')
         for iteration in range(self._num_iterations):
             statistics = self._run_one_iteration(iteration)
             self._statistics.append(statistics)
@@ -100,11 +64,12 @@ class Experiment:
 
         Returns:
             A dict containing summary statistics for this iteration.
+
         """
-        logger.info('Starting iteration %d', iteration)
+        LOGGER.info('Starting iteration %d', iteration)
         statistics = iteration_statistics.IterationStatistics()
-        num_episodes_train, average_reward_train = self._run_train_phase(statistics)
-        num_episodes_eval, average_reward_eval = self._run_eval_phase(statistics)
+        _, _ = self._run_train_phase(statistics)
+        _, _ = self._run_eval_phase(statistics)
         return statistics.data_lists
 
     def _run_train_phase(self, statistics):
@@ -117,6 +82,7 @@ class Experiment:
         Returns:
             num_episodes: int, The number of episodes run in this phase.
             average_reward: The average reward generated in this phase.
+
         """
         self._agent.eval_mode = False
         start_time = time.time()
@@ -125,9 +91,9 @@ class Experiment:
         average_return = sum_returns / num_episodes if num_episodes > 0 else 0.0
         statistics.append({'train_average_return': average_return})
         time_delta = time.time() - start_time
-        logger.info('Average undiscounted return per training episode: %.2f',
+        LOGGER.info('Average undiscounted return per training episode: %.2f',
                     average_return)
-        logger.info('Average training steps per second: %.2f',
+        LOGGER.info('Average training steps per second: %.2f',
                     number_steps / time_delta)
         return num_episodes, average_return
 
@@ -142,13 +108,14 @@ class Experiment:
         Returns:
             num_episodes: int, The number of episodes run in this phase.
             average_reward: float, The average reward generated in this phase.
+
         """
         self._agent.eval_mode = True
         _, sum_returns, num_episodes = self._run_one_phase(
-                self._evaluation_steps, statistics, 'eval')
+            self._evaluation_steps, statistics, 'eval')
         average_return = sum_returns / num_episodes if num_episodes > 0 else 0.0
-        logger.info('Average undiscounted return per evaluation episode: %.2f',
-                        average_return)
+        LOGGER.info('Average undiscounted return per evaluation episode: %.2f',
+                    average_return)
         statistics.append({'eval_average_return': average_return})
         return num_episodes, average_return
 
@@ -162,9 +129,10 @@ class Experiment:
             run_mode_str: str, describes the run mode for this agent.
 
         Returns:
-            Tuple containing the number of steps taken in this phase (int), the
-                sum of returns (float), and the number of episodes performed
+            A tuple containing the number of steps taken in this phase (int),
+                the sum of returns (float), and the number of episodes performed
                 (int).
+
         """
         step_count = 0
         num_episodes = 0
@@ -192,6 +160,7 @@ class Experiment:
 
         Returns:
             The number of steps taken and the total reward.
+
         """
         step_number = 0
         total_reward = 0.

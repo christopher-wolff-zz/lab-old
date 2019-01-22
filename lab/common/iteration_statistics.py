@@ -2,7 +2,7 @@
 """
 
 
-class IterationStatistics(object):
+class IterationStatistics:
     """A class for storing iteration-specific metrics.
 
     The internal format is as follows: we maintain a mapping from keys to lists.

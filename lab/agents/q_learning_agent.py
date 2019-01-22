@@ -1,29 +1,25 @@
 import numpy as np
 
-from lab import Agent
+from lab.core import Agent
 
 
 class QLearningAgent(Agent):
-    """An abstract base class for agents."""
+    """An agent that implements tabular Q-Learning with TD updates."""
 
     def __init__(self,
-                 action_space_n,
-                 observation_space_n,
-                 alpha=0.5,  # learning rate
-                 gamma=0.99,  # discount factor
-                 epsilon_i=1,  # initial exploration rate
-                 epsilon_f=0.05,  # final exploration rate
-                 epsilon_n=50000):  # number of steps to decay exploration rate
-        super()
+                 action_space_n: int,
+                 observation_space_n: int,
+                 learning_rate: float = 0.5,
+                 discount_factor: float = 0.99,
+                 exploration_rate: float = 0.1) -> None:
+        super().__init__()
 
         self._action_space_n = action_space_n
         self._observation_space_n = observation_space_n
 
-        self._alpha = alpha
-        self._gamma = gamma
-        self._epsilon_i = epsilon_i
-        self._epsilon_f = epsilon_f
-        self._epsilon_n = epsilon_n
+        self._learning_rate = learning_rate
+        self._discount_factor = discount_factor
+        self._exploration_rate = exploration_rate
 
         self._step_count = 0
         self._last_observation = None
@@ -31,20 +27,11 @@ class QLearningAgent(Agent):
         # Initialize empty Q table
         self._q = np.zeros((self._observation_space_n, self._action_space_n))
 
-    def _choose_action(self, observation, eval_mode=False):
-        """Choose an action.
-
-        Args:
-            eval_mode: boolean, whether the experiment is currently in
-                evaluation mode.
-
-        Returns:
-            int, the chosen action.
-        """
+    def _choose_action(self, observation: np.ndarray, eval_mode: bool = False):
         if eval_mode:
             return self._choose_greedy_action(observation)
-        else:
-            return self._choose_epsilon_greedy_action(observation)
+
+        return self._choose_epsilon_greedy_action(observation)
 
     def _choose_greedy_action(self, observation):
         """Choose an action greedily.
@@ -54,6 +41,7 @@ class QLearningAgent(Agent):
 
         Returns:
             int, the chosen action.
+
         """
         return np.argmax(self._q[observation])
 
@@ -68,19 +56,12 @@ class QLearningAgent(Agent):
 
         Returns:
             int, the chosen action.
-        """
-        # Compute exploration rate
-        if self._step_count < self._epsilon_n:
-            epsilon = self._epsilon_i - self._step_count * \
-                    (self._epsilon_i - self._epsilon_f) / self._epsilon_n
-        else:
-            epsilon = epsilon_f
 
-        # Randomly decide which type of action to take
-        if np.random.random() < epsilon:
+        """
+        if np.random.random() < self._exploration_rate:
             return np.random.randint(self._action_space_n)
-        else:
-            return self._choose_greedy_action(observation)
+
+        return self._choose_greedy_action(observation)
 
     def begin_episode(self, observation):
         """Choose the first action at the start of the episode.
@@ -90,6 +71,7 @@ class QLearningAgent(Agent):
 
         Returns:
             int, the chosen action.
+
         """
         self._step_count = 1
         self._last_observation = observation
@@ -105,13 +87,14 @@ class QLearningAgent(Agent):
 
         Returns:
             int, the chosen action.
+
         """
         # Choose an action
         action = self._choose_action(observation)
 
         # TD update
-        target = reward + self._gamma * np.max(self._q[observation])
-        self._q[self._last_observation, action] += self._alpha * \
+        target = reward + self._discount_factor * np.max(self._q[observation])
+        self._q[self._last_observation, action] += self._learning_rate * \
                 (target - self._q[self._last_observation, action])
 
         # Update statistics
