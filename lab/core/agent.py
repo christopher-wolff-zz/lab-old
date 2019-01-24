@@ -4,51 +4,54 @@ import numpy as np
 
 
 class Agent(metaclass=ABCMeta):
-    """An abstract base class for agents."""
+    """An abstract base class for agents.
 
-    def __init__(self) -> None:
-        self._seed: int
+    Attributes:
+        eval_mode: (bool) Whether the agent is currently in evaluation mode as
+            opposed to training mode.
 
-    @property
-    def seed(self) -> int:
-        """A seed for all randomness related to the agent.
+    """
 
-        Returns:
-            The seed of the agent.
-
-        """
-        return self._seed
+    def __init__(self):
+        self.eval_mode = False
 
     @abstractmethod
-    def begin_episode(self, observation: np.ndarray) -> int:
-        """Advance the agent for the first step of an episode.
+    def seed(self, seed):
+        """Seed the random number generators of the agent.
 
         Args:
-            observation: The initial observation from the environment.
-
-        Returns:
-            The first action to take.
+            seed: (int) The seed to use.
 
         """
 
     @abstractmethod
-    def step(self, reward: float, observation: np.ndarray) -> int:
-        """Advance the agent by one step.
-
-        Args:
-            observation: An observation from the environment.
-            reward: A reward from the environment.
+    def act(self):
+        """Choose an action.
 
         Returns:
-            An action to take.
+            (int) The chosen action.
 
         """
 
-    @abstractmethod
-    def end_episode(self, reward: float) -> None:
-        """Advance the agent for the last step of an episode.
+    def learn(self, reward, observation):
+        """Learn from the most recent observation and reward.
+
+        This method is called immediately after the environment advances by one
+        step and the resulting reward and observation are recorded.
 
         Args:
-            reward: The final reward from the environment.
+            reward: (float) The reward for the previous action.
+            observation: (Observation) A new observation of the environment.
 
         """
+
+    def begin_episode(self, observation):
+        """Run a procedure at the beginning of an episode.
+
+        Args:
+            observation: (Observation) The initial observation of the episode.
+
+        """
+
+    def end_episode(self):
+        """Run a procedure at the end of an episode."""

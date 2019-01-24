@@ -4,104 +4,85 @@ from lab.core import Agent
 
 
 class QLearningAgent(Agent):
-    """An agent that implements tabular Q-Learning with TD updates."""
+    """An agent that uses tabular Q-learning with TD updates.
 
-    def __init__(self,
-                 action_space_n: int,
-                 observation_space_n: int,
-                 learning_rate: float = 0.5,
-                 discount_factor: float = 0.99,
-                 exploration_rate: float = 0.1) -> None:
+    This implementation only works if the observation space is discrete and
+    fully observable. We assume that each observation we receive represents the
+    complete environment state.
+
+    The agent uses an epsilon-greedy policy, which means that it mixes between
+    choosing the action it thinks is best and a random action.
+
+    """
+
+    def __init__(self, num_actions, num_states, learning_rate=0.5,
+                 exploration_rate=0.1, discount_factor=0.99):
+        """Initialize a Q-learning agent.
+
+        Args:
+            num_actions: (int) The size of the action space.
+            num_states: (int) The size of the state space.
+            learning_rate: (float) The learning rate used in TD updates.
+            exploration_rate: (float) The fraction of steps during which to
+                explore the environment. This is the epsilon used in the
+                epsilon-greedy policy.
+            discount_factor: (float) The factor by which to discount future
+                rewards internally. Used for TD updates.
+
+        """
         super().__init__()
 
-        self._action_space_n = action_space_n
-        self._observation_space_n = observation_space_n
+        self._num_actions = num_actions
+        self._num_states = num_states
 
         self._learning_rate = learning_rate
-        self._discount_factor = discount_factor
         self._exploration_rate = exploration_rate
+        self._discount_factor = discount_factor
 
-        self._step_count = 0
-        self._last_observation = None
+        self._last_state = None
+        self._rng = np.random
+        self._Q = np.zeros((self._num_states, self._num_actions))
 
-        # Initialize empty Q table
-        self._q = np.zeros((self._observation_space_n, self._action_space_n))
+    def seed(self, seed):
+        """See base class."""
+        self._rng.seed(seed)
 
-    def _choose_action(self, observation: np.ndarray, eval_mode: bool = False):
-        if eval_mode:
-            return self._choose_greedy_action(observation)
-
-        return self._choose_epsilon_greedy_action(observation)
-
-    def _choose_greedy_action(self, observation):
-        """Choose an action greedily.
-
-        Args:
-            observation: int, the newest observation.
-
-        Returns:
-            int, the chosen action.
-
-        """
-        return np.argmax(self._q[observation])
-
-    def _choose_epsilon_greedy_action(self, observation):
-        """Choose an action greedily.
-
-        With probability self._epsilon, we choose a random action. Otherwise, we
-        choose a greedy action.
-
-        Args:
-            observation: int, the newest observation.
-
-        Returns:
-            int, the chosen action.
-
-        """
-        if np.random.random() < self._exploration_rate:
-            return np.random.randint(self._action_space_n)
-
-        return self._choose_greedy_action(observation)
-
-    def begin_episode(self, observation):
-        """Choose the first action at the start of the episode.
-
-        Args:
-            observation: int, the initial observation.
-
-        Returns:
-            int, the chosen action.
-
-        """
-        self._step_count = 1
-        self._last_observation = observation
-        return self._choose_action(observation)
-
-    def step(self, reward, observation):
-        """Update the Q table and choose an action.
-
-        Args:
-            reward: float, the reward for the previous action from the
-                environment.
-            observation: int, the newest observation.
-
-        Returns:
-            int, the chosen action.
-
-        """
-        # Choose an action
-        action = self._choose_action(observation)
-
-        # TD update
-        target = reward + self._discount_factor * np.max(self._q[observation])
-        self._q[self._last_observation, action] += self._learning_rate * \
-                (target - self._q[self._last_observation, action])
-
-        # Update statistics
-        self._step_count += 1
-        self._last_observation = observation
-
+    def act(self):
+        """See base class."""
+        state = self._last_state
+        if self.eval_mode:
+            action = self._choose_greedy_action(state)
+        else:
+            action = self._choose_epsilon_greedy_action(state)
+        self._last_action = action
         return action
 
-    def end_episode(self, reward):
-        self._last_observation = None
+    def _choose_greedy_action(self, state):
+        return np.argmax(self._Q[state])
+
+    def _choose_epsilon_greedy_action(self, state):
+        if self._rng.random() < self._exploration_rate:
+            return self._rng.randint(self._num_actions)
+        else:
+            return self._choose_greedy_action(state)
+
+    def begin_episode(self, observation):
+        """See base class."""
+        self._last_state = observation
+
+    def learn(self, reward, observation):
+        """See base class.
+
+        We update the Q-table using a TD update.
+
+        """
+        state = self._last_state
+        action = self._last_action
+        next_state = observation
+
+        # TD update
+        target = reward + self._discount_factor * np.max(self._Q[next_state])
+        delta =  target - self._Q[state, action]
+        self._Q[state, action] += self._learning_rate * delta
+
+        self._last_state = observation

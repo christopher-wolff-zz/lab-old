@@ -1,44 +1,38 @@
 from abc import ABCMeta, abstractmethod
-from typing import Tuple
-
-import numpy as np
 
 
 class Environment(metaclass=ABCMeta):
     """An abstract base class for environments."""
 
-    def __init__(self) -> None:
-        self._seed = None
+    @abstractmethod
+    def seed(self, seed):
+        """Seed the random number generators of the environment.
 
-    @property
-    def seed(self) -> int:
-        """A seed for all randomness related to the environment.
-
-        Returns:
-            The seed of the environment.
+        Args:
+            seed: (int) The seed to use.
 
         """
-        return self._seed
 
     @abstractmethod
-    def step(self, action: int) -> Tuple[np.ndarray, float, bool]:
+    def step(self, action):
         """Advance the environment by one step.
 
         Args:
-            action: The action chosen by the agent.
+            action: (int) The action chosen by the agent.
 
         Returns:
-            The next observation for the agent.
-            The reward for the agents action.
-            An indicator for whether the episode has ended.
+            (ndarray) The next observation for the agent.
+            (float) The reward for the agents action.
+            (bool) An indicator for whether the episode has ended (bool).
+            (dict) Diagnostic information for debugging.
 
         """
 
     @abstractmethod
-    def reset(self) -> np.ndarray:
+    def reset(self):
         """Reset the environment.
 
         Returns:
-            The initial observation of a new episode.
+            (ndarray) The initial observation of a new episode.
 
         """

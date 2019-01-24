@@ -2,12 +2,7 @@ import logging
 import sys
 import time
 
-from lab.common import iteration_statistics
-from lab.core.agent import Agent
-from lab.core.environment import Environment
 
-
-# Logger setup
 LOGGER = logging.getLogger('experiment')
 LOGGER.setLevel(logging.DEBUG)
 
@@ -20,169 +15,198 @@ class Experiment:
 
     """
 
-    def __init__(self,
-                 agent: Agent,
-                 environment: Environment,
-                 num_iterations: int,
-                 training_steps: int,
-                 evaluation_steps: int,
-                 max_steps_per_episode: int) -> None:
-        """Initialize an Experiment object.
+    def __init__(self, agent, environment, num_iterations, train_steps,
+                 eval_steps, max_steps_per_episode, seed=None):
+        """Initialize an experiment.
 
         Args:
-            environment: The environment to test the agent in.
-            agent: The agent to act in the experiment.
-            num_iterations: The number of iterations to run.
-            training_steps: The number of training steps to perform.
-            evaluation_steps: The number of evaluation steps to perform.
-            max_steps_per_episode: The maximum number of steps after which
+            environment: (Environment) The environment to test the agent in.
+            agent: (Agent) The agent to act in the experiment.
+            num_iterations: (int) The number of iterations to run.
+            train_steps: (int) The number of training steps per iteration.
+            eval_steps: (int) The number of evaluation steps per iteration.
+            max_steps_per_episode: (int) The maximum number of steps after which
                 an episode terminates.
+            seed: (int) A seed for the experiment. If possible, this fixes all
+                randomness related to the experiment.
 
         """
         self._environment = environment
         self._agent = agent
 
         self._num_iterations = num_iterations
-        self._training_steps = training_steps
-        self._evaluation_steps = evaluation_steps
+        self._train_steps = train_steps
+        self._eval_steps = eval_steps
         self._max_steps_per_episode = max_steps_per_episode
 
-        self._statistics = []
+        self._seed = seed
+        self._agent.seed(seed)
+        self._environment.seed(seed)
+
+        self._stats = {}
 
     def run(self):
-        """Run a full experiment, spread over multiple iterations."""
-        LOGGER.info('Beginning training...')
-        for iteration in range(self._num_iterations):
-            statistics = self._run_one_iteration(iteration)
-            self._statistics.append(statistics)
+        """Run the experiment from start to finish.
 
-    def _run_one_iteration(self, iteration):
-        """Runs one iteration of agent/environment interaction.
-
-        Args:
-            iteration: int, the current iteration number.
+        An experiment consists of repeated iterations, each of which has a
+        training phase followed by an evaluation phase. During a phase, episodes
+        of agent/environment interactions are simulated until a given number of
+        steps is reached.
 
         Returns:
-            A dict containing summary statistics for this iteration.
+            (dict) Statistics about the experiment.
 
         """
-        LOGGER.info('Starting iteration %d', iteration)
-        statistics = iteration_statistics.IterationStatistics()
-        _, _ = self._run_train_phase(statistics)
-        _, _ = self._run_eval_phase(statistics)
-        return statistics.data_lists
+        self._reset()
 
-    def _run_train_phase(self, statistics):
+        LOGGER.info('Beginning the experiment...')
+        for iteration in range(self._num_iterations):
+            LOGGER.info('Starting iteration %d', iteration)
+            self._run_train_phase()
+            self._run_eval_phase()
+
+        return self._stats
+
+    def _reset(self):
+        """Reset the experiment.
+
+        Note: We do not reset any of the random number generators related to the
+        agent or environment. This ensures that running the experiment multiple
+        times in a row does not generate identical outcomes.
+
+        """
+        self._stats = {
+            'train_average_returns': [],
+            'train_episode_counts': [],
+            'eval_average_returns': [],
+            'eval_episode_counts': []
+        }
+
+    def _run_train_phase(self):
         """Run one training phase.
 
-        Args:
-            statistics: `IterationStatistics` object which records the
-            experimental results. Note - This object is modified by this method.
-
         Returns:
-            num_episodes: int, The number of episodes run in this phase.
-            average_reward: The average reward generated in this phase.
+            (int) The number of episodes run in this phase.
+            (float) The average return generated in this phase.
 
         """
+        # Prepare phase
         self._agent.eval_mode = False
-        start_time = time.time()
-        number_steps, sum_returns, num_episodes = self._run_one_phase(
-            self._training_steps, statistics, 'train')
-        average_return = sum_returns / num_episodes if num_episodes > 0 else 0.0
-        statistics.append({'train_average_return': average_return})
-        time_delta = time.time() - start_time
-        LOGGER.info('Average undiscounted return per training episode: %.2f',
-                    average_return)
-        LOGGER.info('Average training steps per second: %.2f',
-                    number_steps / time_delta)
-        return num_episodes, average_return
 
-    def _run_eval_phase(self, statistics):
+        # Run phase
+        start_time = time.time()
+        num_steps, total_return, num_episodes = self._run_one_phase(
+            min_steps=self._train_steps,
+            run_mode='train'
+        )
+        time_delta = time.time() - start_time
+
+        # Statistics
+        average_return = total_return / num_episodes if num_episodes > 0 else 0.
+        self._stats['train_average_returns'].append(average_return)
+        self._stats['train_episode_counts'].append(num_episodes)
+
+        # Logging
+        LOGGER.info(
+            'Average undiscounted return per training episode: %.2f',
+            average_return
+        )
+        LOGGER.info(
+            'Average training steps per second: %.2f',
+            num_steps / time_delta
+        )
+
+    def _run_eval_phase(self):
         """Run one evaluation phase.
 
-        Args:
-            statistics: `IterationStatistics` object which records the
-                experimental results. Note - This object is modified by this
-                method.
-
         Returns:
-            num_episodes: int, The number of episodes run in this phase.
-            average_reward: float, The average reward generated in this phase.
+            (int) The number of episodes run in this phase.
+            (float) The average return generated in this phase.
 
         """
+        # Prepare phase
         self._agent.eval_mode = True
-        _, sum_returns, num_episodes = self._run_one_phase(
-            self._evaluation_steps, statistics, 'eval')
-        average_return = sum_returns / num_episodes if num_episodes > 0 else 0.0
-        LOGGER.info('Average undiscounted return per evaluation episode: %.2f',
-                    average_return)
-        statistics.append({'eval_average_return': average_return})
-        return num_episodes, average_return
 
-    def _run_one_phase(self, min_steps, statistics, run_mode_str):
-        """Runs the agent/environment loop until a desired number of steps.
+        # Run phase
+        _, total_return, num_episodes = self._run_one_phase(
+            min_steps=self._eval_steps,
+            run_mode='eval'
+        )
+
+        # Statistics
+        average_return = total_return / num_episodes if num_episodes > 0 else 0.
+        self._stats['eval_average_returns'].append(average_return)
+        self._stats['eval_episode_counts'].append(num_episodes)
+
+        # Logging
+        LOGGER.info(
+            'Average undiscounted return per evaluation episode: %.2f',
+            average_return
+        )
+
+    def _run_one_phase(self, min_steps, run_mode):
+        """Runs the agent/environment loop for a desired number of steps.
+
+        When the desired number of steps is reached, the running episode is
+        finished before stopping.
 
         Args:
-            min_steps: int, minimum number of steps to generate in this phase.
-            statistics: `IterationStatistics` object which records the
-                experimental results.
-            run_mode_str: str, describes the run mode for this agent.
+            min_steps: (int) The minimum number of steps to generate.
+            run_mode: (str) The run mode. Either 'train' or 'eval'.
 
         Returns:
-            A tuple containing the number of steps taken in this phase (int),
-                the sum of returns (float), and the number of episodes performed
-                (int).
+            (int) The number of steps taken.
+            (float) The total return accumulated.
+            (int) The number of episodes performed.
 
         """
         step_count = 0
         num_episodes = 0
-        sum_returns = 0.
+        total_return = 0.
 
         while step_count < min_steps:
             episode_length, episode_return = self._run_one_episode()
-            statistics.append({
-                '{}_episode_lengths'.format(run_mode_str): episode_length,
-                '{}_episode_returns'.format(run_mode_str): episode_return
-            })
+            # TODO: Record episode length and return as statistics
             step_count += episode_length
-            sum_returns += episode_return
+            total_return += episode_return
             num_episodes += 1
             # We use sys.stdout.write instead of logger so as to flush
             # frequently without generating a line break.
-            sys.stdout.write('Steps executed: {} '.format(step_count) +
-                             'Episode length: {} '.format(episode_length) +
-                             'Return: {}\r'.format(episode_return))
+            # sys.stdout.write(
+            #     'Steps executed: {} '.format(step_count) +
+            #     'Episode length: {} '.format(episode_length) +
+            #     'Return: {}\r'.format(episode_return)
+            # )
             # sys.stdout.flush()
-        return step_count, sum_returns, num_episodes
+        return step_count, total_return, num_episodes
 
     def _run_one_episode(self):
-        """Executes a full trajectory of the agent interacting with the environment.
+        """Run a single episode of agent/environment interactions.
+
+        An episode ends when either the environment reaches a terminal state or
+        a specified maximum number of steps is reached.
 
         Returns:
-            The number of steps taken and the total reward.
+            (int) The number of steps taken.
+            (float) The total reward.
 
         """
-        step_number = 0
+        initial_observation = self._environment.reset()
+        self._agent.begin_episode(initial_observation)
+
+        is_terminal = False
+        step_count = 0
         total_reward = 0.
 
-        # Initialize episode
-        initial_observation = self._environment.reset()
-        action = self._agent.begin_episode(initial_observation)
-        is_terminal = False
-
-        # Simulate interactions until we reach a terminal state.
         while True:
+            action = self._agent.act()
             observation, reward, is_terminal, _ = self._environment.step(action)
+            self._agent.learn(reward, observation)
 
             total_reward += reward
-            step_number += 1
+            step_count += 1
 
-            if is_terminal or step_number == self._max_steps_per_episode:
+            if is_terminal or step_count == self._max_steps_per_episode:
                 break
-            else:
-                action = self._agent.step(reward, observation)
 
-        # Finalize episode
-        self._agent.end_episode(reward)
-
-        return step_number, total_reward
+        return step_count, total_reward
