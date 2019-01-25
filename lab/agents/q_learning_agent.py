@@ -11,7 +11,7 @@ class QLearningAgent(Agent):
     complete environment state.
 
     The agent uses an epsilon-greedy policy, which means that it mixes between
-    choosing the action it thinks is best and a random action.
+    choosing the action with the highest Q-value and a random action.
 
     """
 
@@ -49,22 +49,21 @@ class QLearningAgent(Agent):
 
     def act(self):
         """See base class."""
-        state = self._last_state
         if self.eval_mode:
-            action = self._choose_greedy_action(state)
+            action = self._greedy_action()
         else:
-            action = self._choose_epsilon_greedy_action(state)
+            action = self._epsilon_greedy_action()
         self._last_action = action
         return action
 
-    def _choose_greedy_action(self, state):
-        return np.argmax(self._Q[state])
+    def _greedy_action(self):
+        return np.argmax(self._Q[self._last_state])
 
-    def _choose_epsilon_greedy_action(self, state):
+    def _epsilon_greedy_action(self):
         if self._rng.random() < self._exploration_rate:
             return self._rng.randint(self._num_actions)
         else:
-            return self._choose_greedy_action(state)
+            return self._greedy_action()
 
     def begin_episode(self, observation):
         """See base class."""

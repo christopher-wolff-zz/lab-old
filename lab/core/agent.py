@@ -24,6 +24,14 @@ class Agent(metaclass=ABCMeta):
 
         """
 
+    def begin_episode(self, observation):
+        """Run a procedure at the beginning of an episode.
+
+        Args:
+            observation: (Observation) The initial observation of the episode.
+
+        """
+
     @abstractmethod
     def act(self):
         """Choose an action.
@@ -42,14 +50,6 @@ class Agent(metaclass=ABCMeta):
         Args:
             reward: (float) The reward for the previous action.
             observation: (Observation) A new observation of the environment.
-
-        """
-
-    def begin_episode(self, observation):
-        """Run a procedure at the beginning of an episode.
-
-        Args:
-            observation: (Observation) The initial observation of the episode.
 
         """
 

@@ -15,8 +15,18 @@ class Experiment:
 
     """
 
-    def __init__(self, agent, environment, num_iterations, train_steps,
-                 eval_steps, max_steps_per_episode, seed=None):
+    def __init__(
+        self,
+        agent,
+        environment,
+        num_iterations,
+        train_steps,
+        eval_steps,
+        max_steps_per_episode,
+        seed=None,
+        iteration_callback=None,
+        episode_callback=None
+    ):
         """Initialize an experiment.
 
         Args:
@@ -27,8 +37,12 @@ class Experiment:
             eval_steps: (int) The number of evaluation steps per iteration.
             max_steps_per_episode: (int) The maximum number of steps after which
                 an episode terminates.
-            seed: (int) A seed for the experiment. If possible, this fixes all
-                randomness related to the experiment.
+            seed: (int) Optional. A seed for the experiment. If possible, this
+                fixes all randomness related to the experiment.
+            iteration_callback: (func) Optional. A function to be run after
+                every iteration.
+            episode_callback: (func) Optional. A function to be run after every
+                episode.
 
         """
         self._environment = environment
@@ -40,8 +54,13 @@ class Experiment:
         self._max_steps_per_episode = max_steps_per_episode
 
         self._seed = seed
-        self._agent.seed(seed)
-        self._environment.seed(seed)
+        if seed is not None:
+            self._agent.seed(seed)
+            self._environment.seed(seed)
+
+        def do_nothing(*args): pass
+        self._iteration_callback = iteration_callback or do_nothing
+        self._episode_callback = episode_callback or do_nothing
 
         self._stats = {}
 
@@ -58,13 +77,12 @@ class Experiment:
 
         """
         self._reset()
-
         LOGGER.info('Beginning the experiment...')
         for iteration in range(self._num_iterations):
             LOGGER.info('Starting iteration %d', iteration)
             self._run_train_phase()
             self._run_eval_phase()
-
+            self._iteration_callback(self, self._stats)
         return self._stats
 
     def _reset(self):
@@ -166,6 +184,7 @@ class Experiment:
 
         while step_count < min_steps:
             episode_length, episode_return = self._run_one_episode()
+            self._episode_callback(self, self._stats)
             # TODO: Record episode length and return as statistics
             step_count += episode_length
             total_return += episode_return
@@ -208,5 +227,7 @@ class Experiment:
 
             if is_terminal or step_count == self._max_steps_per_episode:
                 break
+
+        self._agent.end_episode()
 
         return step_count, total_reward
