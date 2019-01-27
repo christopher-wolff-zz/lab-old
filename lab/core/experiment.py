@@ -58,7 +58,7 @@ class Experiment:
             self._agent.seed(seed)
             self._environment.seed(seed)
 
-        def do_nothing(*args): pass
+        def do_nothing(*args, **kwargs): pass
         self._iteration_callback = iteration_callback or do_nothing
         self._episode_callback = episode_callback or do_nothing
 
