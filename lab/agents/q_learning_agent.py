@@ -75,13 +75,13 @@ class QLearningAgent(Agent):
         We update the Q-table using a TD update.
 
         """
-        state = self._last_state
-        action = self._last_action
-        next_state = observation
+        last_state = self._last_state
+        last_action = self._last_action
+        state = observation
 
         # TD update
-        target = reward + self._discount_factor * np.max(self._Q[next_state])
-        delta =  target - self._Q[state, action]
-        self._Q[state, action] += self._learning_rate * delta
+        target = reward + self._discount_factor * np.max(self._Q[state])
+        delta = target - self._Q[last_state, last_action]
+        self._Q[last_state, last_action] += self._learning_rate * delta
 
         self._last_state = observation
