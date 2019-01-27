@@ -182,9 +182,9 @@ class Experiment:
     def _reset(self):
         """Reset the experiment.
 
-        Note: We do not reset any of the random number generators related to the
-        agent or environment. This ensures that running the experiment multiple
-        times in a row does not generate identical outcomes.
+        Note: This does not reset any of the random number generators related to
+        the agent or environment, so that running the experiment multiple times
+        in a row does not generate identical outcomes.
 
         """
         self._stats = {
