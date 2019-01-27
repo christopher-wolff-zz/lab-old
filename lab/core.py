@@ -1,3 +1,9 @@
+"""The core module of this code base.
+
+Includes the agent, environment, and experiment APIs.
+
+"""
+
 import logging
 import sys
 import time
