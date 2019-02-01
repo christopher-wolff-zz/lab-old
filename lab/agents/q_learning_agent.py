@@ -7,8 +7,8 @@ class QLearningAgent(Agent):
     """An agent that uses tabular Q-learning with TD updates.
 
     This implementation only works if the observation space is discrete and
-    fully observable. We assume that each observation we receive represents the
-    complete environment state.
+    fully observable. We assume that each observation we receive is an integer
+    that represents the complete environment state.
 
     The agent uses an epsilon-greedy policy, which means that it mixes between
     choosing the action with the highest Q-value and a random action.
