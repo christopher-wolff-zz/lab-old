@@ -92,7 +92,7 @@ class Environment(metaclass=ABCMeta):
         Returns:
             (ndarray) The next observation for the agent.
             (float) The reward for the agents action.
-            (bool) An indicator for whether the episode has ended (bool).
+            (bool) An indicator for whether the episode has ended.
             (dict) Diagnostic information for debugging.
 
         """
